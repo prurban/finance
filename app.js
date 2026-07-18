@@ -173,9 +173,23 @@ function isCleared(t) {
 async function toggleCleared(t) {
   const clearing = !isCleared(t);
   if (t.isRecurring) {
-    if (!DATA.clearedRecurring) DATA.clearedRecurring = [];
-    if (clearing) DATA.clearedRecurring.push(t.id);
-    else DATA.clearedRecurring = DATA.clearedRecurring.filter(id => id !== t.id);
+    if (clearing) {
+      // Materialize the occurrence into a permanent transaction so it stays
+      // in the fortnight history forever (generated occurrences only exist
+      // within a ~60-day window around today).
+      if (!DATA.suppressedRecurring) DATA.suppressedRecurring = [];
+      if (!DATA.suppressedRecurring.includes(t.id)) DATA.suppressedRecurring.push(t.id);
+      DATA.transactions.push({
+        id: 'tx-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        type: t.type, category: t.category, amount: t.amount, date: t.date,
+        description: t.description,
+        cleared: true,
+        fromRec: t.recId,
+      });
+    } else {
+      // Legacy un-tick for occurrences cleared under the old scheme
+      DATA.clearedRecurring = (DATA.clearedRecurring || []).filter(id => id !== t.id);
+    }
   } else {
     const real = DATA.transactions.find(x => x.id === t.id);
     if (real) { if (clearing) real.cleared = true; else delete real.cleared; }
@@ -518,10 +532,14 @@ function renderFnChart() {
     if (t.type === 'income') fnMap[fs].income += t.amount;
     else fnMap[fs].expenses += t.amount;
   }
-  const keys = Object.keys(fnMap).sort().slice(-8);
-  const labels = keys.map(fnLabel);
+  // Show up to the current fortnight plus the next planned one, last 12 total
+  const curFn = getFortnightStart(TODAY);
+  const nextFn = addDays(curFn, 14);
+  const keys = Object.keys(fnMap).sort().filter(k => k <= nextFn).slice(-12);
+  const labels = keys.map(k => fnLabel(k) + (k === curFn ? ' •NOW' : (k === nextFn ? ' (next)' : '')));
   const incomeData = keys.map(k => fnMap[k].income);
   const expData = keys.map(k => fnMap[k].expenses);
+  const netData = keys.map(k => fnMap[k].income - fnMap[k].expenses);
 
   const ctx = document.getElementById('fn-chart').getContext('2d');
   if (fnChart) fnChart.destroy();
@@ -530,8 +548,9 @@ function renderFnChart() {
     data: {
       labels,
       datasets: [
-        { label: 'Income', data: incomeData, backgroundColor: '#c8f04a88', borderColor: '#c8f04a', borderWidth: 2, borderRadius: 4 },
-        { label: 'Expenses', data: expData, backgroundColor: '#f04a4a55', borderColor: '#f04a4a', borderWidth: 2, borderRadius: 4 },
+        { label: 'Money In', data: incomeData, backgroundColor: '#c8f04a88', borderColor: '#c8f04a', borderWidth: 2, borderRadius: 4, order: 2 },
+        { label: 'Money Out', data: expData, backgroundColor: '#f04a4a55', borderColor: '#f04a4a', borderWidth: 2, borderRadius: 4, order: 2 },
+        { type: 'line', label: 'Net (In − Out)', data: netData, borderColor: '#e0e0e0', backgroundColor: '#e0e0e0', borderWidth: 2, tension: 0.3, pointRadius: 3, order: 1 },
       ],
     },
     options: {
@@ -843,6 +862,17 @@ function wireEvents() {
       if (firstRun) switchTab('dashboard');
     }
     renderSyncStatus(await window.api.getSyncStatus());
+  });
+
+  // Backup download
+  document.getElementById('backup-btn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(DATA, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'personal-finance-backup-' + TODAY + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Backup downloaded');
   });
 
   // Edit modal
