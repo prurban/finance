@@ -195,25 +195,17 @@ canvas{max-height:260px}
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="transactions">Transactions</button>
       <button class="tab-btn" data-tab="recurring">Recurring</button>
+      <button class="tab-btn" data-tab="sync">Sync</button>
     </nav>
   </header>
   <main>
     <!-- DASHBOARD -->
     <div class="tab-pane active" id="tab-dashboard">
-      <div id="setup-banner" style="display:none">
-        <strong>Almost there!</strong> Paste your sync code below and tap Connect — your finance data will appear on this device and stay in sync automatically.
-      </div>
       <div class="bank-row">
         <label>Bank Balance</label>
         <input type="number" id="bank-balance" placeholder="0.00" step="0.01"/>
         <button class="btn-save" id="save-balance-btn">Save</button>
         <span style="margin-left:auto;font-size:12px;color:#555" id="balance-updated"></span>
-      </div>
-      <div class="bank-row">
-        <label>Cloud Sync</label>
-        <input type="text" id="sync-url" placeholder="Paste your sync code (https://… .json)" style="flex:1;min-width:0;width:auto"/>
-        <button class="btn-save" id="save-sync-btn">Connect</button>
-        <span style="font-size:12px;white-space:nowrap;color:#555" id="sync-status"></span>
       </div>
       <div class="fn-nav-bar">
         <button class="fn-nav-btn" id="fn-prev">&#8249;</button>
@@ -281,6 +273,27 @@ canvas{max-height:260px}
         <button class="btn-add" id="add-rec-btn">+ Add Recurring</button>
       </div>
       <div id="rec-list"></div>
+    </div>
+    <!-- SYNC -->
+    <div class="tab-pane" id="tab-sync">
+      <div id="setup-banner" style="display:none">
+        <strong>Almost there!</strong> Paste your sync code below and tap Connect — your finance data will appear on this device and stay in sync automatically.
+      </div>
+      <div class="bank-row">
+        <label>Cloud Sync</label>
+        <input type="text" id="sync-url" placeholder="Paste your sync code (https://… .json)" style="flex:1;min-width:0;width:auto"/>
+        <button class="btn-save" id="save-sync-btn">Connect</button>
+        <span style="font-size:12px;white-space:nowrap;color:#555" id="sync-status"></span>
+      </div>
+      <div class="form-panel">
+        <h3>How sync works</h3>
+        <p style="font-size:13px;color:#888;line-height:1.7">
+          Your sync code is remembered on this device — you only ever enter it once.
+          Every change you make saves to the cloud instantly, and your other devices catch up
+          automatically when you open them. Treat the code like a password: anyone who has it
+          can read your finance data. To disconnect this device, clear the box above and press Connect.
+        </p>
+      </div>
     </div>
   </main>
 </div>

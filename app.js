@@ -691,6 +691,13 @@ function renderRecurring() {
   });
 }
 
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
 // ── Render all ─────────────────────────────────────────────────────────────
 function renderAll() {
   renderDashboard();
@@ -812,6 +819,8 @@ function wireEvents() {
   // Cloud sync
   document.getElementById('save-sync-btn').addEventListener('click', async () => {
     const url = document.getElementById('sync-url').value;
+    const banner = document.getElementById('setup-banner');
+    const firstRun = banner.style.display !== 'none';
     const r = await window.api.setSyncUrl(url);
     if (!r.ok) { toast(r.error || 'Invalid sync code'); return; }
     if (!url.trim()) {
@@ -819,17 +828,19 @@ function wireEvents() {
       renderSyncStatus({ configured: false });
       return;
     }
-    document.getElementById('setup-banner').style.display = 'none';
+    banner.style.display = 'none';
     if (IS_WEB) {
       try {
         const remote = await window.api.loadData();
         if (remote && !remote._needsSetup) applyRemote(remote);
         toast('Connected!');
+        if (firstRun) switchTab('dashboard');
       } catch (e) {
         toast('Could not reach the cloud — double-check the code');
       }
     } else {
       toast('Connected!');
+      if (firstRun) switchTab('dashboard');
     }
     renderSyncStatus(await window.api.getSyncStatus());
   });
@@ -865,7 +876,10 @@ function wireEvents() {
   const needsSetup = DATA._needsSetup;
   delete DATA._needsSetup;
   ensureDefaults(DATA);
-  if (needsSetup) document.getElementById('setup-banner').style.display = '';
+  if (needsSetup) {
+    document.getElementById('setup-banner').style.display = '';
+    switchTab('sync'); // first run on a new device: land on the Sync tab
+  }
 
   // Populate initial category selects
   populateCatSelect(document.getElementById('tx-cat'), 'income');
