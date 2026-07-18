@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.firebasedatabase.app https://*.firebaseio.com; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#141414"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Finance"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon.png"/>
+<title>Personal Finance</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#141414;color:#e0e0e0;min-height:100vh}
+#app{display:flex;flex-direction:column;height:100vh}
+header{background:#1a1a1a;border-bottom:1px solid #2a2a2a;padding:12px 24px;display:flex;align-items:center;gap:16px}
+header h1{font-size:18px;font-weight:700;color:#c8f04a;letter-spacing:.5px}
+nav{display:flex;gap:8px;margin-left:auto}
+.tab-btn{background:#222;border:none;color:#888;padding:8px 18px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
+.tab-btn.active{background:#c8f04a;color:#141414}
+.tab-btn:hover:not(.active){color:#e0e0e0;background:#2a2a2a}
+main{flex:1;overflow:auto;padding:24px}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+/* stat cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:20px}
+.card .label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.card .value{font-size:26px;font-weight:700}
+.card .value.income{color:#c8f04a}
+.card .value.expense{color:#f04a4a}
+.card .value.net-pos{color:#c8f04a}
+.card .value.net-neg{color:#f04a4a}
+.card .value.purple{color:#a78bfa}
+.card .sub{font-size:11px;color:#555;margin-top:6px}
+/* chart */
+.chart-wrap{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:20px;margin-bottom:24px}
+.chart-wrap h3{font-size:13px;color:#888;margin-bottom:16px;text-transform:uppercase;letter-spacing:.6px}
+canvas{max-height:260px}
+/* bank balance row */
+.bank-row{display:flex;align-items:center;gap:12px;margin-bottom:24px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:16px 20px}
+.bank-row label{font-size:13px;color:#888;white-space:nowrap}
+.bank-row input{background:#141414;border:1px solid #333;color:#e0e0e0;padding:8px 12px;border-radius:8px;font-size:14px;width:160px}
+.bank-row input:focus{outline:none;border-color:#c8f04a}
+.bank-row .btn-save{background:#c8f04a;color:#141414;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px}
+.bank-row .btn-save:hover{background:#d4f55e}
+/* filters */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.flt{background:#222;border:none;color:#888;padding:7px 14px;border-radius:16px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.flt.active{background:#c8f04a;color:#141414}
+.flt:hover:not(.active){background:#2a2a2a;color:#e0e0e0}
+.flt-sep{width:1px;height:20px;background:#2a2a2a;margin:0 4px}
+/* form */
+.form-panel{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:20px;margin-bottom:24px}
+.form-panel h3{font-size:13px;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.form-grid input,.form-grid select,.form-grid textarea{background:#141414;border:1px solid #333;color:#e0e0e0;padding:9px 12px;border-radius:8px;font-size:13px;width:100%}
+.form-grid input:focus,.form-grid select:focus{outline:none;border-color:#c8f04a}
+.form-grid select option{background:#1a1a1a}
+.btn-add{background:#c8f04a;color:#141414;border:none;padding:9px 20px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;margin-top:12px}
+.btn-add:hover{background:#d4f55e}
+/* transactions list */
+.tx-group{margin-bottom:24px}
+.tx-group-header{font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.8px;padding:8px 0;border-bottom:1px solid #222;margin-bottom:8px}
+.tx-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1e1e1e}
+.tx-row:last-child{border-bottom:none}
+.tx-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tx-dot.income{background:#c8f04a}
+.tx-dot.expense{background:#f04a4a}
+.tx-dot.recurring{background:#a78bfa}
+.tx-info{flex:1;min-width:0}
+.tx-desc{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-meta{font-size:11px;color:#555;margin-top:2px}
+.tx-cat{font-size:11px;color:#444;background:#222;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.tx-amount{font-size:15px;font-weight:700;white-space:nowrap}
+.tx-amount.income{color:#c8f04a}
+.tx-amount.expense{color:#f04a4a}
+.tx-del{background:none;border:none;color:#333;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px;transition:all .15s}
+.tx-del:hover{color:#f04a4a;background:#2a1a1a}
+.tx-edit,.rec-edit{background:none;border:none;color:#333;cursor:pointer;font-size:14px;padding:4px 8px;border-radius:6px;transition:all .15s}
+.tx-edit:hover,.rec-edit:hover{color:#c8f04a;background:#222}
+/* mark-as-paid tick */
+.tx-clear{width:20px;height:20px;border-radius:50%;border:2px solid #333;background:none;cursor:pointer;flex-shrink:0;color:transparent;font-size:11px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.tx-clear:hover{border-color:#c8f04a}
+.tx-clear.on{background:#c8f04a;border-color:#c8f04a;color:#141414;font-weight:900}
+.ov-row.cleared .ov-lbl,.ov-row.cleared .ov-sub{color:#555;text-decoration:line-through}
+.ov-row.cleared .ov-amt{opacity:.45;text-decoration:line-through}
+.tx-row.cleared .tx-desc{color:#555;text-decoration:line-through}
+.tx-row.cleared .tx-amount{opacity:.45;text-decoration:line-through}
+/* recurring */
+.rec-row{display:grid;grid-template-columns:1fr auto auto auto auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #1e1e1e}
+.rec-pause{background:none;border:none;color:#333;cursor:pointer;font-size:12px;padding:4px 8px;border-radius:6px;transition:all .15s}
+.rec-pause:hover{color:#e0a840;background:#222}
+.rec-pause.on{color:#e0a840}
+.rec-info .rec-name{font-size:14px;font-weight:600}
+.rec-info .rec-meta{font-size:11px;color:#555;margin-top:3px}
+.rec-amount{font-size:15px;font-weight:700;color:#a78bfa}
+.rec-del{background:none;border:none;color:#333;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px;transition:all .15s}
+.rec-del:hover{color:#f04a4a;background:#2a1a1a}
+/* fortnightly overview */
+.fn-nav-bar{display:flex;align-items:center;gap:12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:14px 20px;margin-bottom:16px}
+.fn-nav-btn{background:#222;border:none;color:#888;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.fn-nav-btn:hover{background:#2a2a2a;color:#e0e0e0}
+.fn-title-wrap{flex:1;text-align:center}
+.fn-num-lbl{font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px}
+.fn-range-lbl{font-size:15px;font-weight:700;color:#e0e0e0;margin-top:3px}
+.fn-cur-badge{display:inline-block;font-size:10px;background:#c8f04a22;color:#c8f04a;border:1px solid #c8f04a44;border-radius:8px;padding:1px 8px;margin-left:8px;vertical-align:middle}
+.ov-wrap{border:1px solid #2a2a2a;border-radius:12px;overflow:hidden;margin-bottom:12px}
+.ov-head{padding:11px 20px;font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
+.ov-head.income{background:#1a2e18;color:#c8f04a}
+.ov-head.expense{background:#2a1a10;color:#e07840}
+.ov-row{display:flex;align-items:center;padding:10px 20px;border-top:1px solid #1e1e1e;gap:10px;background:#1a1a1a}
+.ov-lbl{flex:1;font-size:13px;color:#ccc}
+.ov-sub{font-size:11px;color:#444;white-space:nowrap}
+.ov-rec-tag{font-size:10px;color:#a78bfa;background:#a78bfa18;border-radius:6px;padding:1px 6px;white-space:nowrap;margin-left:6px}
+.ov-amt{font-size:14px;font-weight:700;min-width:90px;text-align:right;white-space:nowrap}
+.ov-amt.inc{color:#c8f04a}
+.ov-amt.exp{color:#f04a4a}
+.ov-total{display:flex;align-items:center;padding:12px 20px;border-top:2px solid #2a2a2a;background:#141414}
+.ov-total span:first-child{flex:1;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#555}
+.ov-total-val{font-size:16px;font-weight:800}
+.ov-total.income .ov-total-val{color:#c8f04a}
+.ov-total.expense .ov-total-val{color:#f04a4a}
+.pool-block{display:flex;align-items:center;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:18px 20px;margin-bottom:20px}
+.pool-lbl{flex:1}
+.pool-lbl-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#555}
+.pool-lbl-sub{font-size:11px;color:#444;margin-top:3px}
+.pool-val{font-size:26px;font-weight:800}
+.pool-val.pos{color:#c8f04a}
+.pool-val.neg{color:#f04a4a}
+/* edit modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:500}
+.modal-backdrop.open{display:flex}
+.modal{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;padding:24px;width:min(560px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.8)}
+.modal h3{font-size:13px;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px}
+.modal-scope{margin-bottom:16px}
+.modal-scope-note{font-size:12px;color:#a78bfa;margin-bottom:8px}
+.scope-btns{display:flex;gap:8px}
+.scope-btn{background:#222;border:1px solid #333;color:#888;padding:7px 14px;border-radius:16px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
+.scope-btn.active{background:#a78bfa;border-color:#a78bfa;color:#141414}
+.scope-btn:hover:not(.active){color:#e0e0e0;background:#2a2a2a}
+.md-field{display:flex;flex-direction:column;gap:4px}
+.md-field label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.6px}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+.btn-cancel{background:#222;color:#888;border:none;padding:9px 20px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px}
+.btn-cancel:hover{background:#2a2a2a;color:#e0e0e0}
+/* toast */
+#toast{position:fixed;bottom:24px;right:24px;background:#c8f04a;color:#141414;padding:12px 20px;border-radius:10px;font-weight:700;font-size:13px;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;z-index:999}
+#toast.show{opacity:1;transform:translateY(0)}
+.section-title{font-size:13px;color:#666;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+.empty{color:#444;font-size:13px;padding:20px 0;text-align:center}
+.toggle-row{display:flex;align-items:center;gap:8px;margin-left:auto}
+.toggle-row span{font-size:12px;color:#666}
+/* setup banner (mobile first run) */
+#setup-banner{background:#1a2e18;border:1px solid #c8f04a44;border-radius:12px;padding:16px 20px;margin-bottom:16px;font-size:13px;color:#c8f04a;line-height:1.5}
+/* mobile */
+@media (max-width:640px){
+  header{padding:10px 12px;gap:8px;flex-wrap:wrap}
+  header h1{font-size:15px}
+  nav{gap:4px}
+  .tab-btn{padding:7px 12px;font-size:12px}
+  main{padding:12px;padding-bottom:32px}
+  .bank-row{flex-wrap:wrap;padding:12px 14px;gap:8px}
+  .bank-row input{flex:1;min-width:100px;width:auto}
+  .fn-nav-bar{padding:10px 12px}
+  .fn-range-lbl{font-size:13px}
+  .ov-row{padding:10px 12px;gap:8px}
+  .ov-head{padding:10px 12px}
+  .ov-total{padding:10px 12px}
+  .ov-amt{min-width:70px;font-size:13px}
+  .ov-sub{display:none}
+  .pool-block{padding:14px}
+  .pool-val{font-size:22px}
+  .form-panel{padding:14px}
+  .form-grid{grid-template-columns:1fr 1fr}
+  .tx-row{gap:8px}
+  .tx-cat{display:none}
+  .tx-amount{font-size:13px}
+  .tx-edit,.rec-edit,.tx-del,.rec-del,.rec-pause{padding:4px 5px}
+  .rec-row{gap:6px}
+  .modal{padding:16px;max-height:90vh;overflow:auto}
+  .filters{gap:6px}
+  .flt{padding:6px 10px;font-size:11px}
+  .toggle-row{margin-left:0;width:100%;justify-content:flex-end}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Personal Finance</h1>
+    <nav>
+      <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="transactions">Transactions</button>
+      <button class="tab-btn" data-tab="recurring">Recurring</button>
+    </nav>
+  </header>
+  <main>
+    <!-- DASHBOARD -->
+    <div class="tab-pane active" id="tab-dashboard">
+      <div id="setup-banner" style="display:none">
+        <strong>Almost there!</strong> Paste your sync code below and tap Connect — your finance data will appear on this device and stay in sync automatically.
+      </div>
+      <div class="bank-row">
+        <label>Bank Balance</label>
+        <input type="number" id="bank-balance" placeholder="0.00" step="0.01"/>
+        <button class="btn-save" id="save-balance-btn">Save</button>
+        <span style="margin-left:auto;font-size:12px;color:#555" id="balance-updated"></span>
+      </div>
+      <div class="bank-row">
+        <label>Cloud Sync</label>
+        <input type="text" id="sync-url" placeholder="Paste your sync code (https://… .json)" style="flex:1;min-width:0;width:auto"/>
+        <button class="btn-save" id="save-sync-btn">Connect</button>
+        <span style="font-size:12px;white-space:nowrap;color:#555" id="sync-status"></span>
+      </div>
+      <div class="fn-nav-bar">
+        <button class="fn-nav-btn" id="fn-prev">&#8249;</button>
+        <div class="fn-title-wrap">
+          <div class="fn-num-lbl" id="fn-num-label"></div>
+          <div class="fn-range-lbl" id="fn-range-label"></div>
+        </div>
+        <button class="fn-nav-btn" id="fn-next">&#8250;</button>
+      </div>
+      <div id="fn-overview"></div>
+      <div class="chart-wrap">
+        <h3>Fortnight History</h3>
+        <canvas id="fn-chart"></canvas>
+      </div>
+    </div>
+    <!-- TRANSACTIONS -->
+    <div class="tab-pane" id="tab-transactions">
+      <div class="form-panel">
+        <h3>Add Transaction</h3>
+        <div class="form-grid">
+          <select id="tx-type">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <select id="tx-cat"></select>
+          <input type="number" id="tx-amount" placeholder="Amount" step="0.01" min="0"/>
+          <input type="date" id="tx-date"/>
+          <input type="text" id="tx-desc" placeholder="Description" style="grid-column:span 2"/>
+        </div>
+        <button class="btn-add" id="add-tx-btn">+ Add</button>
+      </div>
+      <div class="filters">
+        <button class="flt active" data-txf="all">All</button>
+        <button class="flt" data-txf="income">Income</button>
+        <button class="flt" data-txf="expense">Expenses</button>
+        <div class="flt-sep"></div>
+        <button class="flt active" data-view="fn">Fortnightly</button>
+        <button class="flt" data-view="wk">Weekly</button>
+        <div class="toggle-row">
+          <span>Oldest first</span>
+          <button class="flt active" id="sort-toggle">Newest first</button>
+        </div>
+      </div>
+      <div id="tx-list"></div>
+    </div>
+    <!-- RECURRING -->
+    <div class="tab-pane" id="tab-recurring">
+      <div class="form-panel">
+        <h3>Add Recurring Transaction</h3>
+        <div class="form-grid">
+          <input type="text" id="rec-name" placeholder="Name (e.g. Salary)"/>
+          <select id="rec-type">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select>
+          <select id="rec-cat"></select>
+          <input type="number" id="rec-amount" placeholder="Amount" step="0.01" min="0"/>
+          <select id="rec-freq">
+            <option value="weekly">Weekly</option>
+            <option value="fortnightly">Fortnightly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <input type="date" id="rec-start" title="First occurrence date"/>
+        </div>
+        <button class="btn-add" id="add-rec-btn">+ Add Recurring</button>
+      </div>
+      <div id="rec-list"></div>
+    </div>
+  </main>
+</div>
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <h3 id="modal-title">Edit Transaction</h3>
+    <div class="modal-scope" id="modal-scope" style="display:none">
+      <div class="modal-scope-note">This is part of a recurring series &mdash; choose what to change:</div>
+      <div class="scope-btns">
+        <button class="scope-btn active" id="scope-series">All occurrences</button>
+        <button class="scope-btn" id="scope-one">Just this one</button>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="md-field" id="md-name-wrap" style="grid-column:span 2"><label>Name</label><input type="text" id="md-name" placeholder="Name"/></div>
+      <div class="md-field"><label>Type</label><select id="md-type">
+        <option value="expense">Expense</option>
+        <option value="income">Income</option>
+      </select></div>
+      <div class="md-field"><label>Category</label><select id="md-cat"></select></div>
+      <div class="md-field"><label>Amount</label><input type="number" id="md-amount" placeholder="Amount" step="0.01" min="0"/></div>
+      <div class="md-field" id="md-freq-wrap"><label>Frequency</label><select id="md-freq">
+        <option value="weekly">Weekly</option>
+        <option value="fortnightly">Fortnightly</option>
+        <option value="monthly">Monthly</option>
+      </select></div>
+      <div class="md-field"><label id="md-date-label">Date</label><input type="date" id="md-date"/></div>
+      <div class="md-field" id="md-end-wrap"><label>End date (optional)</label><input type="date" id="md-end"/></div>
+      <div class="md-field" id="md-desc-wrap" style="grid-column:span 2"><label>Description</label><input type="text" id="md-desc" placeholder="Description"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="md-cancel">Cancel</button>
+      <button class="btn-add" style="margin-top:0" id="md-save">Save Changes</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
