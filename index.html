@@ -153,14 +153,40 @@ canvas{max-height:260px}
 .empty{color:#444;font-size:13px;padding:20px 0;text-align:center}
 .toggle-row{display:flex;align-items:center;gap:8px;margin-left:auto}
 .toggle-row span{font-size:12px;color:#666}
+/* goals */
+.goal-card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:20px;margin-bottom:16px}
+.goal-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.goal-name{font-size:16px;font-weight:800;flex:1}
+.goal-amounts{font-size:22px;font-weight:800;margin:2px 0 10px}
+.goal-amounts .of{font-size:13px;color:#666;font-weight:600}
+.goal-track{height:10px;background:#141414;border:1px solid #2a2a2a;border-radius:6px;overflow:hidden;margin-bottom:10px}
+.goal-fill{height:100%;border-radius:6px;transition:width .4s}
+.goal-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.goal-stat{font-size:11px;font-weight:700;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:5px 10px;color:#aaa}
+.goal-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid #222;padding-top:12px}
+.goal-add input[type=number]{background:#141414;border:1px solid #333;color:#e0e0e0;padding:8px 12px;border-radius:8px;font-size:13px;width:110px}
+.goal-add input[type=text]{background:#141414;border:1px solid #333;color:#e0e0e0;padding:8px 12px;border-radius:8px;font-size:13px;flex:1;min-width:100px}
+.goal-add input:focus{outline:none;border-color:#c8f04a}
+.goal-add label{font-size:11px;color:#666;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.goal-contribs{margin-top:10px}
+.gc-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #1e1e1e;font-size:12px;color:#999}
+.gc-row .amt{font-weight:700;color:#c8f04a}
+.gc-row .d{color:#555}
+.gc-row .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.goal-edit-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.goal-edit-row input{background:#141414;border:1px solid #333;color:#e0e0e0;padding:7px 10px;border-radius:8px;font-size:12px}
+.mng-del{background:#2a1a1a;color:#f04a4a;border:1px solid #f04a4a44;padding:5px 11px;border-radius:7px;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap}
+.mng-del.armed{background:#f04a4a;color:#141414}
+.icon-btn{background:none;border:none;color:#444;cursor:pointer;font-size:14px;padding:3px 7px;border-radius:6px}
+.icon-btn:hover{color:#c8f04a;background:#222}
 /* setup banner (mobile first run) */
 #setup-banner{background:#1a2e18;border:1px solid #c8f04a44;border-radius:12px;padding:16px 20px;margin-bottom:16px;font-size:13px;color:#c8f04a;line-height:1.5}
 /* mobile */
 @media (max-width:640px){
   header{padding:10px 12px;gap:8px;flex-wrap:wrap}
   header h1{font-size:15px}
-  nav{gap:4px}
-  .tab-btn{padding:7px 12px;font-size:12px}
+  nav{gap:4px;flex-wrap:wrap;justify-content:flex-end}
+  .tab-btn{padding:6px 10px;font-size:11px}
   main{padding:12px;padding-bottom:32px}
   .bank-row{flex-wrap:wrap;padding:12px 14px;gap:8px}
   .bank-row input{flex:1;min-width:100px;width:auto}
@@ -184,7 +210,15 @@ canvas{max-height:260px}
   .filters{gap:6px}
   .flt{padding:6px 10px;font-size:11px}
   .toggle-row{margin-left:0;width:100%;justify-content:flex-end}
+  .goal-card{padding:14px}
+  .goal-amounts{font-size:18px}
+  .goal-add input[type=number]{width:80px}
+  .goal-add input[type=text]{min-width:70px}
+  .goal-add label{font-size:10px}
+  .goal-stat{max-width:100%}
 }
+.goal-stat{max-width:100%;overflow-wrap:anywhere}
+.goal-card{max-width:100%;overflow:hidden}
 /* keep the header clear of the phone's status bar / notch */
 header{padding-top:calc(14px + env(safe-area-inset-top, 0px))}
 </style>
@@ -197,6 +231,7 @@ header{padding-top:calc(14px + env(safe-area-inset-top, 0px))}
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="transactions">Transactions</button>
       <button class="tab-btn" data-tab="recurring">Recurring</button>
+      <button class="tab-btn" data-tab="goals">Goals</button>
       <button class="tab-btn" data-tab="sync">Sync</button>
     </nav>
   </header>
@@ -275,6 +310,19 @@ header{padding-top:calc(14px + env(safe-area-inset-top, 0px))}
         <button class="btn-add" id="add-rec-btn">+ Add Recurring</button>
       </div>
       <div id="rec-list"></div>
+    </div>
+    <!-- GOALS -->
+    <div class="tab-pane" id="tab-goals">
+      <div id="goals-list"></div>
+      <div class="form-panel">
+        <h3>New Goal</h3>
+        <div class="form-grid">
+          <input type="text" id="goal-name" placeholder="Goal name (e.g. Honeymoon)"/>
+          <input type="number" id="goal-target" placeholder="Target $" min="0" step="0.01"/>
+          <input type="date" id="goal-date" title="Target date (optional)"/>
+        </div>
+        <button class="btn-add" id="add-goal-btn">+ Add Goal</button>
+      </div>
     </div>
     <!-- SYNC -->
     <div class="tab-pane" id="tab-sync">

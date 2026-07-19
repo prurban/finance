@@ -260,6 +260,7 @@ function ensureDefaults(d) {
   if (!d.recurring) d.recurring = [];
   if (!d.suppressedRecurring) d.suppressedRecurring = [];
   if (!d.clearedRecurring) d.clearedRecurring = [];
+  if (!d.goals) d.goals = [];
   if (!d.bankBalance) d.bankBalance = 0;
   return d;
 }
@@ -717,11 +718,142 @@ function switchTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
 }
 
+// ── Goals ──────────────────────────────────────────────────────────────────
+function armDelete(btn, label, onConfirm) {
+  if (btn.dataset.armed === '1') { onConfirm(); return; }
+  btn.dataset.armed = '1';
+  const original = btn.textContent;
+  btn.textContent = label;
+  btn.classList.add('armed');
+  setTimeout(() => {
+    if (btn.dataset.armed === '1') { btn.dataset.armed = '0'; btn.textContent = original; btn.classList.remove('armed'); }
+  }, 4000);
+}
+
+function goalSaved(g) { return (g.contributions || []).reduce((s, c) => s + c.amount, 0); }
+
+function goalStats(g) {
+  const saved = goalSaved(g);
+  const target = +g.target || 0;
+  const out = [];
+  if (target > 0) {
+    const remaining = Math.max(0, target - saved);
+    out.push(`<span class="goal-stat">${Math.min(100, Math.round(saved / target * 100))}% there</span>`);
+    if (remaining === 0) {
+      out.push(`<span class="goal-stat" style="color:#c8f04a;border-color:#c8f04a55">GOAL REACHED! &#127881;</span>`);
+    } else {
+      if (g.targetDate && g.targetDate > TODAY) {
+        const fnLeft = Math.max(1, Math.ceil(daysBetween(TODAY, g.targetDate) / 14));
+        out.push(`<span class="goal-stat" style="color:${g.color}">Put away ${fmtMoney(remaining / fnLeft)}/fortnight to hit it by ${fmtDate(g.targetDate)}</span>`);
+      }
+      const cons = (g.contributions || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+      if (cons.length >= 2) {
+        const spanDays = Math.max(14, daysBetween(cons[0].date, TODAY));
+        const perFn = saved / (spanDays / 14);
+        if (perFn > 0) {
+          const fnNeeded = Math.ceil(remaining / perFn);
+          out.push(`<span class="goal-stat">At your current pace (${fmtMoney(perFn)}/fn) you'll get there ~${fmtDate(addDays(TODAY, fnNeeded * 14))}</span>`);
+        }
+      }
+    }
+  } else {
+    out.push(`<span class="goal-stat">Set a target below to unlock the "per fortnight" plan</span>`);
+  }
+  return out.join('');
+}
+
+function renderGoals() {
+  const el = document.getElementById('goals-list');
+  if (!el) return;
+  const goals = DATA.goals || [];
+  el.innerHTML = goals.length ? goals.map(g => {
+    const saved = goalSaved(g);
+    const target = +g.target || 0;
+    const pct = target > 0 ? Math.min(100, saved / target * 100) : 0;
+    const cons = (g.contributions || []).slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+    return `<div class="goal-card" data-gid="${g.id}">
+      <div class="goal-head">
+        <span style="font-size:22px">${g.emoji || '⭐'}</span>
+        <span class="goal-name">${g.name}</span>
+        <button class="icon-btn g-edit" title="Edit target/date">&#9998;</button>
+        <button class="mng-del g-del">Delete</button>
+      </div>
+      <div class="goal-amounts" style="color:${g.color || '#c8f04a'}">${fmtMoney(saved)} <span class="of">${target > 0 ? 'of ' + fmtMoney(target) : '— no target set yet'}${g.targetDate ? ' by ' + fmtDate(g.targetDate) : ''}</span></div>
+      <div class="goal-track"><div class="goal-fill" style="width:${pct}%;background:${g.color || '#c8f04a'}"></div></div>
+      <div class="goal-stats">${goalStats(g)}</div>
+      <div class="goal-edit-row" style="display:none">
+        <input type="number" class="g-target" placeholder="Target $" value="${target || ''}" step="0.01" min="0"/>
+        <input type="date" class="g-date" value="${g.targetDate || ''}"/>
+        <button class="btn-save g-save">Save</button>
+      </div>
+      <div class="goal-add">
+        <input type="number" class="g-amt" placeholder="Amount $" step="0.01" min="0"/>
+        <input type="text" class="g-note" placeholder="Note (optional)"/>
+        <label><input type="checkbox" class="g-frombal" checked/> take from bank balance</label>
+        <button class="btn-add" style="margin-top:0" data-gadd>+ Put Away</button>
+      </div>
+      <div class="goal-contribs">${cons.map(c => `
+        <div class="gc-row"><span class="amt">+${fmtMoney(c.amount)}</span><span class="d">${fmtDate(c.date)}</span><span class="n">${c.note || ''}</span>
+        <button class="icon-btn gc-del" data-cid="${c.id}" title="Remove (reverses balance if it was deducted)">&#x2715;</button></div>`).join('')}
+        ${(g.contributions || []).length > 5 ? `<div class="gc-row" style="color:#555">… ${(g.contributions).length - 5} earlier</div>` : ''}
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">No goals yet — add your first below.</div>';
+
+  el.querySelectorAll('.goal-card').forEach(card => {
+    const g = (DATA.goals || []).find(x => x.id === card.dataset.gid);
+    if (!g) return;
+    card.querySelector('.g-edit').addEventListener('click', () => {
+      const row = card.querySelector('.goal-edit-row');
+      row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+    });
+    card.querySelector('.g-save').addEventListener('click', async () => {
+      g.target = parseFloat(card.querySelector('.g-target').value) || 0;
+      const dt = card.querySelector('.g-date').value;
+      if (dt) g.targetDate = dt; else delete g.targetDate;
+      await save(); renderGoals();
+    });
+    card.querySelector('.g-del').addEventListener('click', (e) => {
+      armDelete(e.target, 'Tap again to delete', async () => {
+        DATA.goals = (DATA.goals || []).filter(x => x.id !== g.id);
+        await save(); renderGoals();
+        toast(`Goal "${g.name}" deleted`);
+      });
+    });
+    card.querySelector('[data-gadd]').addEventListener('click', async () => {
+      const amount = parseFloat(card.querySelector('.g-amt').value);
+      if (!amount || amount <= 0) { toast('Enter an amount first'); return; }
+      const fromBal = card.querySelector('.g-frombal').checked;
+      if (!g.contributions) g.contributions = [];
+      g.contributions.push({ id: 'gc-' + Date.now(), date: TODAY, amount, note: card.querySelector('.g-note').value.trim(), fromBalance: fromBal });
+      if (fromBal) {
+        DATA.bankBalance = Math.round(((DATA.bankBalance || 0) - amount) * 100) / 100;
+        DATA.balanceDate = TODAY;
+        document.getElementById('bank-balance').value = DATA.bankBalance;
+      }
+      await save(); renderGoals(); renderDashboard();
+      toast(`${fmtMoney(amount)} put towards ${g.name}!`);
+    });
+    card.querySelectorAll('.gc-del').forEach(btn => btn.addEventListener('click', async () => {
+      const c = (g.contributions || []).find(x => x.id === btn.dataset.cid);
+      if (!c) return;
+      g.contributions = g.contributions.filter(x => x.id !== c.id);
+      if (c.fromBalance) {
+        DATA.bankBalance = Math.round(((DATA.bankBalance || 0) + c.amount) * 100) / 100;
+        DATA.balanceDate = TODAY;
+        document.getElementById('bank-balance').value = DATA.bankBalance;
+      }
+      await save(); renderGoals(); renderDashboard();
+    }));
+  });
+}
+
 // ── Render all ─────────────────────────────────────────────────────────────
 function renderAll() {
   renderDashboard();
   renderTransactions();
   renderRecurring();
+  renderGoals();
 }
 
 // ── Event wiring ───────────────────────────────────────────────────────────
@@ -812,6 +944,28 @@ function wireEvents() {
   // Recurring type change -> update categories
   document.getElementById('rec-type').addEventListener('change', e => {
     populateCatSelect(document.getElementById('rec-cat'), e.target.value);
+  });
+
+  // Add goal
+  document.getElementById('add-goal-btn').addEventListener('click', async () => {
+    const name = document.getElementById('goal-name').value.trim();
+    if (!name) { toast('Give the goal a name'); return; }
+    if (!DATA.goals) DATA.goals = [];
+    const PALETTE = ['#c8f04a', '#f472b6', '#34d399', '#60a5fa', '#fbbf24', '#a78bfa'];
+    DATA.goals.push({
+      id: 'goal-' + Date.now(),
+      name,
+      emoji: '⭐',
+      color: PALETTE[DATA.goals.length % PALETTE.length],
+      target: parseFloat(document.getElementById('goal-target').value) || 0,
+      targetDate: document.getElementById('goal-date').value || undefined,
+      contributions: [],
+    });
+    document.getElementById('goal-name').value = '';
+    document.getElementById('goal-target').value = '';
+    document.getElementById('goal-date').value = '';
+    await save(); renderGoals();
+    toast('Goal added!');
   });
 
   // Add recurring
