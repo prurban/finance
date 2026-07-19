@@ -219,6 +219,17 @@ canvas{max-height:260px}
 }
 .goal-stat{max-width:100%;overflow-wrap:anywhere}
 .goal-card{max-width:100%;overflow:hidden}
+/* help */
+.help-wrap{max-width:820px}
+.help-wrap details{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;margin-bottom:10px;overflow:hidden}
+.help-wrap summary{padding:14px 18px;font-size:14px;font-weight:800;color:#c8f04a;cursor:pointer;list-style:none}
+.help-wrap summary::before{content:"▸ ";color:#555}
+.help-wrap details[open] summary::before{content:"▾ "}
+.help-body{padding:0 18px 16px;font-size:13px;color:#bbb;line-height:1.7}
+.help-body p{margin-bottom:8px}
+.help-body b{color:#e8e8e8}
+.help-body .hk{background:#141414;border:1px solid #333;border-radius:6px;padding:1px 7px;font-size:12px;color:#c8f04a;white-space:nowrap}
+.help-intro{font-size:13px;color:#999;line-height:1.7;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:16px 18px;margin-bottom:14px}
 /* keep the header clear of the phone's status bar / notch */
 header{padding-top:calc(14px + env(safe-area-inset-top, 0px))}
 </style>
@@ -233,6 +244,7 @@ header{padding-top:calc(14px + env(safe-area-inset-top, 0px))}
       <button class="tab-btn" data-tab="recurring">Recurring</button>
       <button class="tab-btn" data-tab="goals">Goals</button>
       <button class="tab-btn" data-tab="sync">Sync</button>
+      <button class="tab-btn" data-tab="help">Help</button>
     </nav>
   </header>
   <main>
@@ -322,6 +334,53 @@ header{padding-top:calc(14px + env(safe-area-inset-top, 0px))}
           <input type="date" id="goal-date" title="Target date (optional)"/>
         </div>
         <button class="btn-add" id="add-goal-btn">+ Add Goal</button>
+      </div>
+    </div>
+    <!-- HELP -->
+    <div class="tab-pane" id="tab-help">
+      <div class="help-wrap">
+        <div class="help-intro"><b style="color:#c8f04a">How this app works, in one breath:</b> your money runs in fortnights (Friday pay cycle). You keep the <b>bank balance</b> accurate, plan what's coming in and out, <b>tick things off as they actually happen</b> (which updates the balance for you), and watch the Pool — what's genuinely left this fortnight. Everything saves to your private cloud instantly and appears on every phone and computer connected with your sync code.</div>
+
+        <details open><summary>Dashboard — your fortnight at a glance</summary><div class="help-body">
+          <p><b>Bank Balance:</b> type what's actually in your account and press <span class="hk">Save</span>. <b>When:</b> you rarely need to — ticking items as paid keeps it updated automatically. Only correct it manually if it drifts from your real bank (e.g. you bought something you never entered).</p>
+          <p><b>Fortnight navigator:</b> the <span class="hk">‹</span> <span class="hk">›</span> arrows move between fortnights; the CURRENT badge shows which one you're living in. <b>Why:</b> check what's coming out next fortnight before it arrives.</p>
+          <p><b>Money In / Money Out lists:</b> everything expected this fortnight — one-offs plus auto-generated entries from your Recurring items (purple "recurring" tag).</p>
+          <p><b>The ✔ circle (mark as paid):</b> the heart of the app. When a bill actually leaves your account (or pay lands), tap the circle. The bank balance adjusts itself, the item is crossed out but kept forever in history, and the totals stop counting it (no double-counting). Tap again to undo. <b>When:</b> whenever you check your banking and see something has gone through.</p>
+          <p><b>✎ and ✕ on each row:</b> edit or remove that item. Deleting a recurring entry here only skips that one occurrence.</p>
+          <p><b>Pool:</b> bank balance + money still coming in − money still going out, for this fortnight. Green = surplus, red = overspent. This is your "can we afford it?" number.</p>
+          <p><b>Household chart:</b> money in vs out per fortnight (up to 12), with the white <b>Net line</b> showing whether the household came out ahead. Because paid items are stored permanently, this history stays accurate forever.</p>
+        </div></details>
+
+        <details><summary>Transactions — one-off money in or out</summary><div class="help-body">
+          <p><b>Add:</b> pick Income or Expense, a category, amount, date, optional description → <span class="hk">+ Add</span>. <b>When:</b> anything that isn't a repeating bill — a birthday gift, a car repair, a one-off job payment.</p>
+          <p><b>Edit (✎):</b> change anything about a transaction. If it's part of a recurring series you'll be asked: <b>All occurrences</b> (changes the series everywhere, past and future) or <b>Just this one</b> (detaches only that date). <b>When to use "just this one":</b> the electricity bill was $30 higher this month only.</p>
+          <p><b>Filters:</b> All / Income / Expenses buttons; view grouped by Fortnight or Week; toggle newest/oldest first.</p>
+          <p><b>✔ circles</b> work here too, same as the Dashboard.</p>
+        </div></details>
+
+        <details><summary>Recurring — bills &amp; pay that repeat</summary><div class="help-body">
+          <p><b>Add:</b> name, income/expense, category, amount, how often (weekly / fortnightly / monthly), and the date of its first occurrence → <span class="hk">+ Add Recurring</span>. It then auto-appears on the right days everywhere. <b>When:</b> rent, subscriptions, daycare, salary, car finance.</p>
+          <p><b>Edit (✎) — applies to ALL occurrences:</b> change the amount once (e.g. rent increase) and every appearance updates.</p>
+          <p><b>Pause (⏸ / ▶):</b> stops future occurrences but keeps the history. <b>When:</b> a subscription on hold.</p>
+          <p><b>End date:</b> in the edit window — set the last date it should ever occur. <b>When:</b> a payment plan with a known finish, a cancelled service.</p>
+          <p><b>Delete (✕):</b> removes the series entirely (history from generated occurrences disappears too — pausing or end-dating is usually better).</p>
+        </div></details>
+
+        <details><summary>Goals — wedding, house, anything you're saving for</summary><div class="help-body">
+          <p><b>Set up:</b> tap ✎ on a goal card, enter target $ and (optionally) a target date, Save. The app instantly tells you the <b>$/fortnight needed</b> to hit it.</p>
+          <p><b>Put money away:</b> whenever you transfer money to savings, enter the amount → <span class="hk">+ Put Away</span>. Leave <b>"take from bank balance"</b> ticked if the money came out of the account this app tracks (it usually does) — that keeps your everyday balance honest.</p>
+          <p><b>Your pace:</b> after a couple of contributions the card shows your real saving rate and the date you'll actually arrive at the target. If pace-date is later than target-date, put away more per fortnight — that's the whole feedback loop.</p>
+          <p><b>Pro move:</b> add your per-fortnight savings number as a Recurring expense called "Savings" on payday. Then the Pool treats saving like a bill — pay yourselves first.</p>
+          <p><b>Fix a mistake:</b> ✕ next to a contribution removes it (and returns the money to the balance if it was deducted). <b>New goal / delete goal:</b> form at the bottom; Delete needs a second tap to confirm.</p>
+        </div></details>
+
+        <details><summary>Sync, backups &amp; multiple devices</summary><div class="help-body">
+          <p><b>How sync works:</b> every save goes straight to your private cloud database. Other devices catch up when opened (phones also check every 30 seconds). If two people edit while one is offline, the most recent save wins.</p>
+          <p><b>Add a device:</b> open the app link on it, paste the sync code into the Sync tab, Connect — once, ever. The code is like a password: anyone holding it can see and change the money data, so only share it within the household.</p>
+          <p><b>Download Backup:</b> saves your entire data as a file. <b>When:</b> monthly, into OneDrive. <b>Restore:</b> show the backup file + the sync code to any tech-savvy helper (or a Claude session) — the file simply gets uploaded back to the sync address.</p>
+          <p><b>"Save failed / Sync error":</b> just means no internet right now — your change is on this device; use the app normally and it sorts itself out when you're back online.</p>
+          <p><b>On the PC:</b> only run one copy of the desktop app at a time.</p>
+        </div></details>
       </div>
     </div>
     <!-- SYNC -->
