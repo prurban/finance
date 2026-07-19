@@ -185,6 +185,8 @@ canvas{max-height:260px}
   .flt{padding:6px 10px;font-size:11px}
   .toggle-row{margin-left:0;width:100%;justify-content:flex-end}
 }
+/* keep the header clear of the phone's status bar / notch */
+header{padding-top:calc(14px + env(safe-area-inset-top, 0px))}
 </style>
 </head>
 <body>
